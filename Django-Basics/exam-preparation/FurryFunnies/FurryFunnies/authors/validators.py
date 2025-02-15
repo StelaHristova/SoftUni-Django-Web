@@ -6,20 +6,20 @@ from django.utils.deconstruct import deconstructible
 class AlphaValidator:
 
     def __init__(self, message=None):
-        self.message = message or 'Your name must contain letters only!'
+        self.message = message
 
-    # @property
-    # def message(self):
-    #     return self.message
-    #
-    # @message.setter
-    # def message(self, value):
-    #     if value is None:
-    #         self.__message = 'Your name must contain letters only!'
-    #     else:
-    #         self.__message = value
+    @property
+    def message(self):
+        return self.__message
 
-    def __call__(self, value):
+    @message.setter
+    def message(self, value):
+        if value is None:
+            self.__message = 'Your name must contain letters only!'
+        else:
+            self.__message = value
+
+    def __call__(self, value, *args, **kwargs):
         if not value.isalpha():
             raise ValidationError(self.message)
 

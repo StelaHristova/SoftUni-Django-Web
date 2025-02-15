@@ -1,10 +1,11 @@
 from datetime import datetime, time
 
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms import modelform_factory
-from django.http import HttpResponseNotAllowed, HttpResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import classonlymethod, method_decorator
+from django.views import View
 from django.views.generic import TemplateView, RedirectView, ListView, FormView, CreateView, UpdateView, DeleteView, \
     DetailView
 
@@ -30,10 +31,11 @@ class BaseView:
         elif request.method == "POST":
             return self.post(request, *args, **kwargs)
 
+
 @method_decorator(measure_execution_time, name='dispatch')
 class IndexView(TimeRestrictedMixin, TemplateView):
     template_name = 'common/index.html'  # static way
-    end_time = time(21, 43)
+    # end_time = time(21, 0)
     extra_context = {
         'static_time': datetime.now(),
     }  # static way
@@ -51,16 +53,29 @@ class IndexView(TimeRestrictedMixin, TemplateView):
         else:
             return ['common/index.html']
 
+
+# class Index(View):
+#     def get(self, request, *args, **kwargs):
+#         context = {
+#             'dynamic_time': datetime.now()
+#         }
+#
+#         return render(request, 'common/index.html', context)
+
+
 class DashboardView(ListView, FormView):
-    template_name = 'posts/dashboard.html'
-    context_object_name = 'posts'
-    form_class = SearchForm
+    template_name = 'posts/dashboard.html' #template
+    context_object_name = 'posts'           #object name
+    form_class = SearchForm     #the form we want to be rendered
     paginate_by = 2
-    success_url = reverse_lazy('dash')
-    model = Post
+    success_url = reverse_lazy('dash')     #redirect to this page
+    model = Post                           #queryset of all posts
 
     def get_queryset(self):
         queryset = self.model.objects.all()
+
+        if not self.request.user.has_perm('posts.can_approve_posts'):
+            queryset = queryset.filter(approved=True)
 
         if 'query' in self.request.GET:
             query = self.request.GET.get('query')
@@ -69,7 +84,14 @@ class DashboardView(ListView, FormView):
         return queryset
 
 
-class AddPostView(CreateView):
+def approve_post(request, pk):
+    post = Post.objects.get(pk=pk)
+    post.approved = True
+    post.save()
+    return redirect(request.META.get('HTTP_REFERER'))
+
+
+class AddPostView(LoginRequiredMixin, CreateView):
     model = Post
     form_class = PostCreateForm
     template_name = 'posts/add-post.html'
@@ -88,13 +110,12 @@ class EditPostView(UpdateView):
             return modelform_factory(Post, fields=('content',))
 
 
-
 class PostDetailView(DetailView):
     model = Post
     template_name = 'posts/details-post.html'
 
     def get_context_data(self, **kwargs):
-        print(PostDetailView.__mro__)
+        # print(PostDetailView.__mro__)
         context = super().get_context_data(**kwargs)
         context['formset'] = CommentFormSet()
         return context
@@ -117,12 +138,11 @@ class PostDetailView(DetailView):
 
         return self.render_to_response(context)
 
-#
 # def details_page(request, pk: int):
 #     post = Post.objects.get(pk=pk)
 #     formset = CommentFormSet(request.POST or None)
 #
-#     if request.method == "POST":
+#     if request.method == 'POST':
 #         if formset.is_valid():
 #             for form in formset:
 #                 if form.cleaned_data:
@@ -151,9 +171,9 @@ class DeletePostView(DeleteView, FormView):
         post = Post.objects.get(pk=pk)
         return post.__dict__
 
+
+
 class RedirectHomeView(RedirectView):
     url = reverse_lazy('index')  # static way
 
-    # def get_redirect_url(self, *args, **kwargs):  # dynamic_way
-    #     pass
-    #
+

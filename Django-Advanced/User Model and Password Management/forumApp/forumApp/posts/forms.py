@@ -10,7 +10,7 @@ from forumApp.posts.models import Post, Comment
 class PostBaseForm(forms.ModelForm):
     class Meta:
         model = Post
-        fields = "__all__"
+        exclude = ['approved']
 
         error_messages = {
             'title': {
@@ -21,7 +21,6 @@ class PostBaseForm(forms.ModelForm):
                 'required': 'Please enter an author'
             },
         }
-
 
     def clean_author(self):
         author = self.cleaned_data.get('author')
@@ -53,7 +52,6 @@ class PostBaseForm(forms.ModelForm):
         return post
 
 
-
 class PostCreateForm(PostBaseForm):
     pass
 
@@ -70,19 +68,19 @@ class SearchForm(forms.Form):
     query = forms.CharField(
         label='',
         required=False,
-        max_length=10,
+        max_length=100,
         widget=forms.TextInput(
             attrs={
                 'placeholder': 'Search for a post...',
             }
         )
     )
-
+    
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)
     #
     #     self.helper = FormHelper()
-    #     self.helper.form_method = 'get'
+    #     self.helper.form_method = 'post'
     #     self.helper.form_class = 'form-inline'
 
 
@@ -119,4 +117,25 @@ class CommentForm(forms.ModelForm):
             'rows': 1,
         })
 
+
 CommentFormSet = formset_factory(CommentForm, extra=1)
+
+
+# class PostForm(forms.Form):
+#     title = forms.CharField(
+#         max_length=100,
+#     )
+#
+#     content = forms.CharField(
+#         widget=forms.Textarea,
+#     )
+#
+#     author = forms.CharField(
+#         max_length=30,
+#     )
+#
+#     created_at = forms.DateTimeField()
+#
+#     languages = forms.ChoiceField(
+#         choices=LanguageChoice.choices
+#     )
